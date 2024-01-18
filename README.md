@@ -1,5 +1,8 @@
 # Atomicals Javascript Library Special Version
 
+[中文文档](https://github.com/atlaslabsapp/atomicals-js/blob/handle_no_reveal/README_cn.md)
+
+
 This version is only for recovery your BTC when a commit tx is broadcast but no reveal tx is broadcast.
 It looks like your BTC is sent to a address that looks unfamiliar to you, and you got nothing return.
 - When set `refund=true` in `.env` config file, it try to refund from commit tx. 
@@ -72,8 +75,9 @@ It looks like your BTC is sent to a address that looks unfamiliar to you, and yo
 
 
 ## Donate
-If this special version made a difference for you, a BTC donation would be greatly appreciated.
+If this special version made a difference for you, a donation would be greatly appreciated.
 
-`bc1pzgt4jhrmky5ve7xvh6vddvft82qwatmxe06r9f9y63yajwgfgg4q23jadt`
+- BTC: `bc1pzgt4jhrmky5ve7xvh6vddvft82qwatmxe06r9f9y63yajwgfgg4q23jadt`
+- USDT (TRC20): `TXmQ9Z9u776umAeCH5W5rUgMk9rfaL64Fx`
 
 It's the support of users like you that enables me to continue my work.
