@@ -691,7 +691,8 @@ export class AtomicalOperationBuilder {
         const fees: FeeCalculations =
             this.calculateFeesRequiredForAccumulatedCommitAndReveal(
                 mockBaseCommitForFeeCalculation.hashLockP2TR.redeem.output
-                    .length
+                    .length,
+                performBitworkForRevealTx
             );
 
         if (this.refundModel) {
@@ -1247,13 +1248,19 @@ export class AtomicalOperationBuilder {
     }
 
     calculateAmountRequiredForReveal(
-        hashLockP2TROutputLen: number = 0
+        hashLockP2TROutputLen: number = 0,
+        opReturn: boolean = false
     ): number {
         // <Previous txid> <Output index> <Length of scriptSig> <Sequence number>
         // 32 + 4 + 1 + 4 = 41
         // <Witness stack item length> <Signature> ... <Control block>
         // (1 + 65 + 34) / 4 = 25
         // Total: 41 + 25 = 66
+        //-----------------------------------------
+        // OP_RETURN size
+        // 8-bytes value, a one-byte script’s size
+        const OP_RETURN_BYTES: number = 21 + 8 + 1;
+        //-----------------------------------------
         const REVEAL_INPUT_BYTES_BASE = 66;
         let hashLockCompactSizeBytes = 9;
         if (hashLockP2TROutputLen <=252) {
@@ -1262,6 +1269,10 @@ export class AtomicalOperationBuilder {
             hashLockCompactSizeBytes = 3;
         } else if (hashLockP2TROutputLen <= 0xffffffff) {
             hashLockCompactSizeBytes = 5;
+        }
+        let opReturnSize = 0;
+        if (opReturn) {
+            opReturnSize = OP_RETURN_BYTES;
         }
 
         if (this.refundModel) {
@@ -1285,7 +1296,7 @@ export class AtomicalOperationBuilder {
                     // Additional inputs
                     this.inputUtxos.length * INPUT_BYTES_BASE +
                     // Outputs
-                    this.additionalOutputs.length * OUTPUT_BYTES_BASE)
+                    this.additionalOutputs.length * OUTPUT_BYTES_BASE + opReturnSize)
         );
     }
 
@@ -1310,10 +1321,12 @@ export class AtomicalOperationBuilder {
      * @returns
      */
     calculateFeesRequiredForAccumulatedCommitAndReveal(
-        hashLockP2TROutputLen: number = 0
+        hashLockP2TROutputLen: number = 0,
+        opReturn: boolean = false
     ): FeeCalculations {
         const revealFee = this.calculateAmountRequiredForReveal(
-            hashLockP2TROutputLen
+            hashLockP2TROutputLen,
+            opReturn
         );
         const commitFee = this.calculateFeesRequiredForCommit();
         const commitAndRevealFee = commitFee + revealFee;
