@@ -1,117 +1,79 @@
-# Atomicals Javascript Library
+# Atomicals Javascript Library Special Version
 
-> atomicals.xyz
-> Documentation: https://docs.atomicals.xyz
+This version is only for recovery your BTC when a commit tx is broadcast but no reveal tx is broadcast.
+It looks like your BTC is sent to a address that looks unfamiliar to you, and you got nothing return.
+- When set `refund=true` in `.env` config file, it try to refund from commit tx. 
+  You should set a much lower `newSatsbyte` or `--satsbyte` than the original one, or you may get only a few sats back.
+- When set `refund=true`, it try to construct the reveal tx, which continue to mint. 
+  It is highly recommend when the item is not minted out
 
-![Atomicals](banner.png)
+**DO NOT USE IT FOR ANY OTHER PURPOSE!**
 
-### Install, Build and Run Tests
+**THE AUTHOR IS NOT RESPONSIBLE FOR ANY LOSSES!**
 
-## Install
+**USE AT YOUR OWN RISK!**
 
-```
-Download the github repo:
-git clone https://github.com/atomicals/atomicals-js.git
+## Usage
 
-Build:
-# If you don't have yarn installed
-# npm install -g yarn
+1. Clone the modified code, switch to branch `handle_no_reveal` and compile it
+    ```
+    git clone https://github.com/atlaslabsapp/atomicals-js.git
+    cd atomicals-js
+    git checkout -b handle_no_reveal origin/handle_no_reveal
+    yarn install
+    yarn run build
+    ```
 
-yarn install
-yarn run build
+2. Config `.env` file with your mint info. Make sure you fill all params under `required`
+    ``` yaml
+    #################
+    # Recovery configs
+    #################
+    
+    # required
+    
+    # refund=true: create a refund tx, recommend when item already minted out
+    # refund=false: create a reveal tx, recommend when item not minted out
+    refund=false
+    # broadcast=true: broadcast your tx automatically like the original one
+    # broadcast=false: only print the rawTx hex, you can check and broadcast it manually
+    broadcast=false
+    # commitTxid is the tx which sends your BTC to a address that looks unfamiliar to you
+    commitTxid=
+    # time and nonce is required to use the BTC from the unfamiliar address which commit tx sent to
+    # You can get from console log like 'got one finalCopyData:{"args":{"bitworkc":"000000","bitworkr":"6238",
+    #   "mint ticker":"sophon","nonce":7101230,"time":1705506662}}'
+    time=
+    nonce=
+    
+    # optional
+    
+    # When refund=true, BTC will be sent to this address
+    # If left blank, it defaults to the funding address of your wallet
+    refundAddress=
+    # Set new feerate for the tx created. It overrides --satsbyte
+    # If left blank, it defaults to the --satsbyte param in your command
+    # You can also just left blank and change it with the --satsbyte param
+    newSatsbyte=
+    # Pubkey used to construct reveal p2tr address.
+    # It is only for an advanced user to run without the correspond wallet json file
+    # If left blank, it will calculate from the funding address of your wallet
+    childNodeXOnlyPubkey=
+    ```
 
-See all commands at:
+3. Copy your wallet file to `./wallets/wallet.json`, or config your wallet file path in `.env`
 
-yarn run cli --help
-```
+4. Rerun your mint command
 
-### Quick Start - Command Line (CLI)
+5. If all things go well, there will be a rawtx hex shown in console log.
+   - Please use tools like [sparrow](https://sparrowwallet.com/) or https://live.blockcypher.com/btc/decodetx/ to verify that the tx hex is what your need.
+   - Then broadcast it manually at https://mempool.space/tx/push .
+   - You can also set `broadcast=true` in `.env` so the program can broadcast your tx automatically like the original one, but it is not recommend since the code is not fully tested.
 
-First install packages and build, then follow the steps here to create your first Atomical and query the status. Use `yarn cli`to get a list of all commands available.
 
-#### 0. Environment File (.env)
+## Donate
+If this special version made a difference for you, a BTC donation would be greatly appreciated.
 
-The environment file comes with defaults (`.env.example`), but it is highly recommend to install and operate your own ElectrumX server. Web browser communication is possible through the `wss` (secure websockets) interface of ElectrumX.
+`bc1pzgt4jhrmky5ve7xvh6vddvft82qwatmxe06r9f9y63yajwgfgg4q23jadt`
 
-```
-ELECTRUMX_WSS=wss://electrumx.atomicals.xyz:50012
-
-// Optional (defaults to wallet.json)
-WALLET_PATH=path-to-wallet.json
-
-// The number of concurrent processes to be used. This should not exceed the number of CPU cores available. If not set, the default behavior is to use all available CPU cores minus one.
-CONCURRENCY=4
-```
-
-_ELECTRUMX_WSS_: URL of the ElectrumX with Atomicals support. Note that only `wss` endpoints are accessible from web browsers.
-
-#### 1. Wallet Setup
-
-The purpose of the wallet is to create p2tr (pay-to-taproot) spend scripts and to receive change from the transactions made for the various operations. _Do not put more funds than you can afford to lose, as this is still beta!_
-
-To initialize a new `wallet.json` file that will store your address for receiving change use the `wallet-init` command. Alternatively, you may populate the `wallet.json` manually, ensuring that the address at `m/44'/0'/0'/0/0` is equal to the address and the derivePath is set correctly.
-
-Configure the path in the environment `.env` file to point to your wallet file. defaults to `./wallet.json`
-
-Default:
-
-```
-WALLET_PATH=.
-WALLET_FILE=wallet.json
-```
-
-Update to `wallets/` directory:
-
-```
-WALLET_PATH=./wallets
-WALLET_FILE=wallet.json
-```
-
-Create the wallet:
-
-```
-yarn cli wallet-init
-
->>>
-
-Wallet created at wallet.json
-phrase: maple maple maple maple maple maple maple maple maple maple maple maple
-Legacy address (for change): 1FXL2CJ9nAC...u3e9Evdsa2pKrPhkag
-Derive Path: m/44'/0'/0'/0/0
-WIF: L5Sa65gNR6QsBjqK.....r6o4YzcqNRnJ1p4a6GPxqQQ
-------------------------------------------------------
-```
-
-#### 2. Explore the CLI
-
-```
-yarn cli --help
-```
-
-#### 3. Quick Commands
-
-Get all of the commands available:
-
-```
-yarn cli --help
-```
-
-Read the documentation at https://docs.atomicals.xyz
-
-## ElectrumX Server RPC Interface
-
-See updated ElectrumX (https://github.com/atomicals/atomicals-electrumx)
-
-## Any questions or ideas?
-
-https://atomicals.xyz
-
-https://x.com/atomicalsxyz (X - Formerly Twitter)
-
-## Donate to Atomicals Development
-
-We greatly appreciate any donation to help support Atomicals Protocol development. We worked out of passion and kindness for the world, we believe this technology must exist and be free for all to use. Bitcoin is our one hope for freedom and digital sovereignty and we intend to do our best to make it a reality.
-
-BTC: bc1pa5hvv3w3wjwfktd63zcng6yeccxg9aa90e34n9jrjw3thgc52reqxw6has
-
-![Donate to Atomicals Development](donate.png)
+It's the support of users like you that enables me to continue my work.

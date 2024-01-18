@@ -538,13 +538,13 @@ export class AtomicalOperationBuilder {
             throw new Error('Config is required in .env: commitTxid')
         }
         const refundAddress = process.env.refundAddress ?? fundingKeypair.address
-        const refundSatsbyte = process.env.refundSatsbyte ? parseInt(process.env.refundSatsbyte) : NaN
-        const configUnixtime = process.env.unixtime ? parseInt(process.env.unixtime) : NaN
+        const newSatsbyte = process.env.newSatsbyte ? parseInt(process.env.newSatsbyte) : NaN
+        const configUnixtime = process.env.time ? parseInt(process.env.time) : NaN
         const configNonce = process.env.nonce ? parseInt(process.env.nonce) : NaN
-        if (!isNaN(refundSatsbyte)) {
-            this.options.satsbyte = refundSatsbyte
+        if (!isNaN(newSatsbyte)) {
+            this.options.satsbyte = newSatsbyte
         }
-        console.log(`commitTxid=${commitTxid}, refundSatsbyte=${refundSatsbyte}, unixtime=${configUnixtime}, nonce=${configNonce}`)
+        console.log(`commitTxid=${commitTxid}, newSatsbyte=${newSatsbyte}, time=${configUnixtime}, nonce=${configNonce}`)
         const response = (await this.options.electrumApi.getTx(commitTxid, true))
 
         const commitTx = response.tx
@@ -715,7 +715,7 @@ export class AtomicalOperationBuilder {
             }
         } else {
             if (true == true) {
-                throw Error('Not supported yet')
+                throw Error('Not supported yet, please fill both \'time\' and \'nonce\' in .env')
             }
 
             // Attempt to get funding UTXO information
