@@ -537,7 +537,7 @@ export class AtomicalOperationBuilder {
         if (!commitTxid) {
             throw new Error('Config is required in .env: commitTxid')
         }
-        const refundAddress = process.env.refundAddress ?? fundingKeypair.address
+        const refundAddress = process.env.refundAddress ? process.env.refundAddress : fundingKeypair.address
         const newSatsbyte = process.env.newSatsbyte ? parseInt(process.env.newSatsbyte) : NaN
         const configUnixtime = process.env.time ? parseInt(process.env.time) : NaN
         const configNonce = process.env.nonce ? parseInt(process.env.nonce) : NaN
