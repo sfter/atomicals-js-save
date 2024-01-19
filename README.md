@@ -27,13 +27,20 @@ It looks like your BTC is sent to a address that looks unfamiliar to you, and yo
     yarn run build
     ```
 
-2. Config `.env` file with your mint info. Make sure you fill all params under `required`
+2. Config `.env` file with your mint info. Try you best to fill all params under `important`. 
+
+   Based on the status of different parameter inputs, the expected completion time varies:
+    - If both time and nonce are filled in correctly: immediate (or pending reveal bitwork completion)
+    - If only time is filled in correctly: a few hours to several days
+    - If only nonce is filled in correctly: a few seconds to several minutes
+    - If neither time nor nonce is filled in: virtually impossible， find 'time' in your commit tx log or https://www.blockchain.com/explorer/
+
     ``` yaml
     #################
     # Recovery configs
     #################
     
-    # required
+    # important
     
     # refund=true: create a refund tx, recommend when item already minted out
     # refund=false: create a reveal tx, recommend when item not minted out
@@ -41,11 +48,12 @@ It looks like your BTC is sent to a address that looks unfamiliar to you, and yo
     # broadcast=true: broadcast your tx automatically like the original one
     # broadcast=false: only print the rawTx hex, you can check and broadcast it manually
     broadcast=false
-    # commitTxid is the tx which sends your BTC to a address that looks unfamiliar to you
+    # commitTxid is the tx which sends your BTC to a address that looks unfamiliar to you, it is required
     commitTxid=
     # time and nonce is required to use the BTC from the unfamiliar address which commit tx sent to
     # You can get from console log like 'got one finalCopyData:{"args":{"bitworkc":"000000","bitworkr":"6238",
     #   "mint ticker":"sophon","nonce":7101230,"time":1705506662}}'
+    # If you are using a new version which do not have such log, config nonce=0 and leave time blank
     time=
     nonce=
     

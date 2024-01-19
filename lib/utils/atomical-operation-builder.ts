@@ -708,37 +708,49 @@ export class AtomicalOperationBuilder {
             scriptP2TR = mockBaseCommitForFeeCalculation.scriptP2TR
             hashLockP2TR = mockBaseCommitForFeeCalculation.hashLockP2TR
             if (scriptP2TR.address != revealAddress) {
-                console.log(chalk.red(`RevealAddress address not matched, expect: ${revealAddress}, got ${scriptP2TR.address}`))
-                console.log(chalk.red(`Config 'unixtime' or 'nonce' in .env file may be wrong`))
-                console.log(chalk.red(`If you are not sure, leave them blank`))
+                console.error(chalk.red(`RevealAddress address not matched, expect: ${revealAddress}, got ${scriptP2TR.address}`))
+                console.error(chalk.red(`Config 'time' or 'nonce' in .env file may be wrong`))
+                console.error(chalk.red(`If you are not sure, leave them blank`))
                 throw Error('RevealAddress address not matched')
             }
         } else {
-            if (true == true) {
-                throw Error('Not supported yet, please fill both \'time\' and \'nonce\' in .env')
+            if (isNaN(configNonce)) {
+                if (!isNaN(configUnixtime)) {
+                    console.warn(chalk.yellow(`'nonce' not config in '.env', it will take a very very long time to enumerate every possible nonce for every second from 'time' config`))
+                    console.warn(chalk.yellow(`There are ${MAX_NONCE} nonces for every second from 'time' config`))
+                    console.warn(chalk.yellow(`It often takes several hours or even several days to find the right 'nonce' if your 'time' config is precise`))
+                } else {
+                    console.error(chalk.red(`Neither 'nonce' or 'time' config in '.env', it is almost impossible to enumerate every possible nonce with second from now`))
+                    console.error(chalk.red(`Recommend to terminate the program and find 'time' in your commit tx log or https://www.blockchain.com/explorer/transactions/btc/${commitTxid}`))
+                    console.error(chalk.red(`At least to fill the 'time' config in '.env' then restart`))
+                    console.log('Wait 5 seconds to read the above statements')
+                    await sleeper(5)
+                }
             }
 
-            // Attempt to get funding UTXO information
-            const fundingUtxo = await getFundingUtxo(
-                this.options.electrumApi,
-                fundingKeypair.address,
-                fees.commitAndRevealFeePlusOutputs
-            );
-
-            // Log bitwork info if available
-            printBitworkLog(this.bitworkInfoCommit as any, true);
-
-            // Close the electrum API connection
-            this.options.electrumApi.close();
+            let timeStart: number
+            if (!isNaN(configUnixtime)) {
+                timeStart = configUnixtime
+                console.log(`Start with config time: ${timeStart}`)
+            } else if (commitTx.time) {
+                timeStart = commitTx.time
+                console.warn(chalk.yellow(`'time' not config in '.env', start with time of commit tx: ${timeStart}`))
+            } else {
+                timeStart = Math.floor(Date.now() / 1000)
+                console.warn(chalk.yellow(`'time' not config in '.env' and can't get time of commit tx, start with current time ${timeStart}`))
+            }
 
             // Set the default concurrency level to the number of CPU cores minus 1
             const defaultConcurrency = os.cpus().length - 1;
             // Read the concurrency level from .env file
             const envConcurrency = process.env.CONCURRENCY ? parseInt(process.env.CONCURRENCY, 10) : NaN;
             // Use envConcurrency if it is a positive number and less than or equal to defaultConcurrency; otherwise, use defaultConcurrency
-            const concurrency = (!isNaN(envConcurrency) && envConcurrency > 0 && envConcurrency <= defaultConcurrency)
+            let concurrency = (!isNaN(envConcurrency) && envConcurrency > 0 && envConcurrency <= defaultConcurrency)
                 ? envConcurrency
                 : defaultConcurrency;
+            if (!isNaN(configNonce)) {
+                concurrency = 1;
+            }
             // Logging the set concurrency level to the console
             console.log(`Concurrency set to: ${concurrency}`);
             const workerOptions = this.options;
@@ -772,6 +784,7 @@ export class AtomicalOperationBuilder {
 
                 // Handle messages from workers
                 worker.on("message", (message: WorkerOut) => {
+                    console.log(chalk.green("got one finalCopyData:" + JSON.stringify(message.finalCopyData)));
                     console.log("Solution found, try composing the transaction...");
 
                     if (!isWorkDone) {
@@ -791,62 +804,6 @@ export class AtomicalOperationBuilder {
                             fundingKeypair,
                             atomPayload
                         );
-
-                    let psbtStart = new Psbt({ network: NETWORK });
-                        psbtStart.setVersion(1);
-
-                        psbtStart.addInput({
-                            hash: fundingUtxo.txid,
-                            index: fundingUtxo.index,
-                            sequence: workerOptions.rbf
-                                ? RBF_INPUT_SEQUENCE
-                                : undefined,
-                            tapInternalKey: Buffer.from(
-                                fundingKeypair.childNodeXOnlyPubkey as number[]
-                            ),
-                            witnessUtxo: {
-                                value: fundingUtxo.value,
-                                script: Buffer.from(fundingKeypair.output, "hex"),
-                            },
-                        });
-                        psbtStart.addOutput({
-                            address: updatedBaseCommit.scriptP2TR.address,
-                            value: this.getOutputValueForCommit(fees),
-                        });
-
-                        this.addCommitChangeOutputIfRequired(
-                            fundingUtxo.value,
-                            fees,
-                            psbtStart,
-                            fundingKeypair.address
-                        );
-
-                        psbtStart.signInput(0, fundingKeypair.tweakedChildNode);
-                        psbtStart.finalizeAllInputs();
-
-                        let prelimTx = psbtStart.extractTransaction();
-                        const interTx = psbtStart.extractTransaction();
-                        const finalPrelimTx: Transaction =
-                            message.finalPrelimTx as Transaction;
-
-                        const rawtx = interTx.toHex();
-                        AtomicalOperationBuilder.finalSafetyCheckForExcessiveFee(
-                            psbtStart,
-                            interTx
-                        );
-                        if (!this.broadcastWithRetries(rawtx)) {
-                            console.log(
-                                "Error sending",
-                                finalPrelimTx.getId(),
-                                rawtx
-                            );
-                            throw new Error(
-                                "Unable to broadcast commit transaction after attempts: " +
-                                prelimTx.getId()
-                            );
-                        } else {
-                            console.log("Success sent tx: ", prelimTx.getId());
-                        }
 
                         commitMinedWithBitwork = true;
                         performBitworkForCommitTx = false;
@@ -874,13 +831,19 @@ export class AtomicalOperationBuilder {
                     }
                 });
 
-                // Calculate nonce range for this worker
-                const nonceStart = i * nonceRangePerWorker;
-                let nonceEnd = nonceStart + nonceRangePerWorker - 1;
 
-                // Ensure the last worker covers the remaining range
-                if (i === concurrency - 1) {
-                    nonceEnd = MAX_NONCE - 1;
+                let nonceStart: number, nonceEnd: number;
+                if (!isNaN(configNonce)) {
+                    nonceStart = nonceEnd = configNonce;
+                } else {
+                    // Calculate nonce range for this worker
+                    nonceStart = i * nonceRangePerWorker;
+                    nonceEnd = nonceStart + nonceRangePerWorker - 1;
+
+                    // Ensure the last worker covers the remaining range
+                    if (i === concurrency - 1) {
+                        nonceEnd = MAX_NONCE - 1;
+                    }
                 }
 
                 // Send necessary data to the worker
@@ -888,9 +851,11 @@ export class AtomicalOperationBuilder {
                     copiedData,
                     nonceStart,
                     nonceEnd,
+                    timeStart,
+                    revealAddress,
                     workerOptions,
                     fundingWIF,
-                    fundingUtxo,
+                    fundingUtxo: undefined,
                     fees,
                     performBitworkForCommitTx,
                     workerBitworkInfoCommit,

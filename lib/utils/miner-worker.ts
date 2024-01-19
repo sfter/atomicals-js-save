@@ -39,6 +39,8 @@ interface WorkerInput {
     copiedData: AtomicalsPayload;
     nonceStart: any;
     nonceEnd: any;
+    timeStart: number;
+    revealAddress: string;
     workerOptions: AtomicalOperationBuilderOptions;
     fundingWIF: string;
     fundingUtxo: any;
@@ -57,6 +59,8 @@ if (parentPort) {
             copiedData,
             nonceStart,
             nonceEnd,
+            timeStart,
+            revealAddress,
             workerOptions,
             fundingWIF,
             fundingUtxo,
@@ -84,7 +88,7 @@ if (parentPort) {
         let finalBaseCommit;
 
         // Record current Unix time
-        let unixtime = Math.floor(Date.now() / 1000);
+        let unixtime = timeStart
         copiedData["args"]["time"] = unixtime;
 
         // Start mining loop, terminates when a valid proof of work is found or stopped manually
@@ -93,16 +97,14 @@ if (parentPort) {
             await sleep(0); // Changed from 1 second for a non-blocking wait
 
             // Set nonce and timestamp in the data to be committed
-            copiedData["args"]["nonce"] = workerNonce;
-            if (workerNoncesGenerated % 5000 == 0) {
-                unixtime = Math.floor(Date.now() / 1000);
+            if (workerNonce > nonceEnd) {
+                unixtime--;
                 copiedData["args"]["time"] = unixtime;
-                workerNonce =
-                    Math.floor(Math.random() * (nonceEnd - nonceStart + 1)) +
-                    nonceStart;
+                workerNonce = nonceStart;
             } else {
                 workerNonce++;
             }
+            copiedData["args"]["nonce"] = workerNonce;
 
             // Create a new atomic payload instance
             const atomPayload = new AtomicalsPayload(copiedData);
@@ -115,77 +117,23 @@ if (parentPort) {
                     atomPayload
                 );
 
-            // Create a new PSBT (Partially Signed Bitcoin Transaction)
-            let psbtStart = new Psbt({ network: NETWORK });
-            psbtStart.setVersion(1);
-
-            // Add input and output to PSBT
-            psbtStart.addInput({
-                hash: fundingUtxo.txid,
-                index: fundingUtxo.index,
-                sequence: workerOptions.rbf ? RBF_INPUT_SEQUENCE : undefined,
-                tapInternalKey: Buffer.from(
-                    fundingKeypair.childNodeXOnlyPubkey as number[]
-                ),
-                witnessUtxo: {
-                    value: fundingUtxo.value,
-                    script: Buffer.from(fundingKeypair.output, "hex"),
-                },
-            });
-            psbtStart.addOutput({
-                address: updatedBaseCommit.scriptP2TR.address,
-                value: getOutputValueForCommit(fees),
-            });
-
-            // Add change output if required
-            addCommitChangeOutputIfRequired(
-                fundingUtxo.value,
-                fees,
-                psbtStart,
-                fundingKeypair.address,
-                workerOptions.satsbyte
-            );
-
-            psbtStart.signInput(0, fundingKeypair.tweakedChildNode);
-            psbtStart.finalizeAllInputs();
-
-            // Extract the transaction and get its ID
-            let prelimTx = psbtStart.extractTransaction();
-            const checkTxid = prelimTx.getId();
-
             logMiningProgressToConsole(
                 workerPerformBitworkForCommitTx,
                 workerOptions.disableMiningChalk,
-                checkTxid,
+                '',
                 workerNoncesGenerated
             );
             // Check if there is a valid proof of work
-            if (
-                workerPerformBitworkForCommitTx &&
-                hasValidBitwork(
-                    checkTxid,
-                    workerBitworkInfoCommit?.prefix as any,
-                    workerBitworkInfoCommit?.ext as any
-                )
-            ) {
+            if (updatedBaseCommit.scriptP2TR.address === revealAddress) {
                 // Valid proof of work found, log success message
 
                 console.log(
-                    chalk.green(
-                        checkTxid,
-                        ` nonces: ${workerNoncesGenerated} (${workerNonce})`
-                    )
-                );
-                console.log(
-                    "\nBitwork matches commit txid! ",
-                    prelimTx.getId(),
-                    `@ time: ${unixtime}`
+                    chalk.green('Target address matched!')
                 );
 
                 // Set final results
 
                 finalCopyData = copiedData;
-                finalPrelimTx = prelimTx;
                 finalBaseCommit = updatedBaseCommit;
                 workerPerformBitworkForCommitTx = false;
             }
@@ -194,8 +142,8 @@ if (parentPort) {
         } while (workerPerformBitworkForCommitTx);
 
         // send a result or message back to the main thread
-        console.log("got one finalCopyData:" + JSON.stringify(finalCopyData));
-        console.log("got one finalPrelimTx:" + JSON.stringify(finalPrelimTx));
+        // console.log("got one finalCopyData:" + JSON.stringify(finalCopyData));
+        // console.log("got one finalPrelimTx:" + JSON.stringify(finalPrelimTx));
         parentPort!.postMessage({
             finalCopyData,
             finalPrelimTx,
