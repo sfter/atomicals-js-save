@@ -74,7 +74,7 @@ It looks like your BTC is sent to a address that looks unfamiliar to you, and yo
 
 3. Copy your wallet file to `./wallets/wallet.json`, or config your wallet file path in `.env`
 
-4. Rerun your mint command
+4. Rerun your mint command. It is recommended to add `--rbf` params so that you can rerun the program to replace your tx in some case
 
 5. If all things go well, there will be a rawtx hex shown in console log.
    - Please use tools like [sparrow](https://sparrowwallet.com/) or https://live.blockcypher.com/btc/decodetx/ to verify that the tx hex is what your need.

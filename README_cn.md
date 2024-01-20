@@ -68,7 +68,7 @@
 
 3. 将您的钱包文件复制到 `./wallets/wallet.json`，或在 `.env` 中配置您的钱包文件路径
 
-4. 重新运行您的铸造命令
+4. 重新运行您的铸造命令. 推荐添加 `--rbf` 参数以便在某些情况下重新运行本程序来替换交易
 
 5. 如果一切顺利，控制台日志将显示一个原始交易的 hex 值。
     - 请使用诸如 [sparrow](https://sparrowwallet.com/) 或 https://live.blockcypher.com/btc/decodetx/ 的工具来验证交易 hex 是否符合您的需求。

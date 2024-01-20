@@ -748,9 +748,6 @@ export class AtomicalOperationBuilder {
             let concurrency = (!isNaN(envConcurrency) && envConcurrency > 0 && envConcurrency <= defaultConcurrency)
                 ? envConcurrency
                 : defaultConcurrency;
-            if (!isNaN(configNonce)) {
-                concurrency = 1;
-            }
             // Logging the set concurrency level to the console
             console.log(`Concurrency set to: ${concurrency}`);
             const workerOptions = this.options;
@@ -832,9 +829,11 @@ export class AtomicalOperationBuilder {
                 });
 
 
-                let nonceStart: number, nonceEnd: number;
+                let nonceStart: number, nonceEnd: number, timeStartForWorker: number, timeDelta: number;
                 if (!isNaN(configNonce)) {
                     nonceStart = nonceEnd = configNonce;
+                    timeStartForWorker = timeStart - i;
+                    timeDelta = concurrency;
                 } else {
                     // Calculate nonce range for this worker
                     nonceStart = i * nonceRangePerWorker;
@@ -844,6 +843,8 @@ export class AtomicalOperationBuilder {
                     if (i === concurrency - 1) {
                         nonceEnd = MAX_NONCE - 1;
                     }
+                    timeStartForWorker = timeStart;
+                    timeDelta = 1;
                 }
 
                 // Send necessary data to the worker
@@ -851,7 +852,8 @@ export class AtomicalOperationBuilder {
                     copiedData,
                     nonceStart,
                     nonceEnd,
-                    timeStart,
+                    timeStart: timeStartForWorker,
+                    timeDelta,
                     revealAddress,
                     workerOptions,
                     fundingWIF,

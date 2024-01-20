@@ -40,6 +40,7 @@ interface WorkerInput {
     nonceStart: any;
     nonceEnd: any;
     timeStart: number;
+    timeDelta: number;
     revealAddress: string;
     workerOptions: AtomicalOperationBuilderOptions;
     fundingWIF: string;
@@ -60,6 +61,7 @@ if (parentPort) {
             nonceStart,
             nonceEnd,
             timeStart,
+            timeDelta,
             revealAddress,
             workerOptions,
             fundingWIF,
@@ -98,7 +100,7 @@ if (parentPort) {
 
             // Set nonce and timestamp in the data to be committed
             if (workerNonce > nonceEnd) {
-                unixtime--;
+                unixtime -= timeDelta;
                 copiedData["args"]["time"] = unixtime;
                 workerNonce = nonceStart;
             } else {
